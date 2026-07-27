@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚦 Semaforo Impazzito</title>
+  <style>
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:'Comic Sans MS', cursive, sans-serif;
+      background: radial-gradient(circle at top, #2c3e50, #111827 72%);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .app{
+      width:min(980px, calc(100vw - 24px));
+      background:rgba(15, 23, 42, 0.84);
+      border:2px solid rgba(255,255,255,.12);
+      border-radius:28px;
+      padding:24px;
+      box-shadow:0 18px 50px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      position:relative;
+    }
+    h1{
+      margin:0 0 8px;
+      text-align:center;
+      font-size:clamp(2rem, 4vw, 3.2rem);
+      color:#f1c40f;
+      text-shadow:0 2px 0 rgba(0,0,0,.35);
+    }
+    .subtitle{
+      text-align:center;
+      margin:0 0 18px;
+      opacity:.9;
+      line-height:1.5;
+    }
+    .topbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:center;
+      margin-bottom:16px;
+    }
+    .btn{
+      border:0;
+      border-radius:14px;
+      padding:12px 18px;
+      font:inherit;
+      font-weight:700;
+      cursor:pointer;
+      color:white;
+      background:#34495e;
+      transition:transform .15s ease, background .15s ease, box-shadow .15s ease;
+      box-shadow:0 8px 18px rgba(0,0,0,.18);
+    }
+    .btn:hover{ transform:translateY(-2px); background:#2ecc71; }
+    .btn:active{ transform:translateY(1px) scale(.98); }
+    .btn.secondary{ background:#8e44ad; }
+    .btn.secondary:hover{ background:#9b59b6; }
+
+    .scoreboard{
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+      font-size:1rem;
+    }
+    .pill{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      padding:10px 14px;
+      min-width:130px;
+      text-align:center;
+    }
+
+    .screen{ display:none; }
+    .screen.show{ display:block; }
+
+    .traffic{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      padding:24px 0 12px;
+      min-height:320px;
+    }
+    .light{
+      width:140px;
+      padding:16px;
+      border-radius:30px;
+      background:linear-gradient(180deg, #2f3640, #1f2937);
+      box-shadow:0 16px 30px rgba(0,0,0,.28);
+      border:2px solid rgba(255,255,255,.08);
+    }
+    .bulb{
+      width:96px;
+      height:96px;
+      margin:10px auto;
+      border-radius:50%;
+      background:#2c3e50;
+      box-shadow:inset 0 0 0 6px rgba(255,255,255,.06), 0 0 0 0 rgba(255,255,255,0);
+      transition:transform .12s ease, background .2s ease, box-shadow .2s ease;
+    }
+    .bulb.red.on{
+      background:#ff4d4d;
+      box-shadow:0 0 24px rgba(255,77,77,.55);
+    }
+    .bulb.yellow.on{
+      background:#ffd93d;
+      box-shadow:0 0 24px rgba(255,217,61,.55);
+    }
+    .bulb.green.on{
+      background:#2ecc71;
+      box-shadow:0 0 24px rgba(46,204,113,.55);
+    }
+    .current{
+      font-size:clamp(1.4rem, 2.6vw, 2rem);
+      font-weight:700;
+      text-align:center;
+      margin:4px 0 0;
+    }
+
+    .playBtn{
+      border:none;
+      border-radius:20px;
+      padding:18px 28px;
+      font:inherit;
+      font-weight:700;
+      font-size:1.2rem;
+      cursor:pointer;
+      color:#fff;
+      background:#7f8c8d;
+      box-shadow:0 14px 30px rgba(0,0,0,.22);
+      transition:transform .15s ease, background .15s ease, opacity .15s ease;
+    }
+    .playBtn:hover{ transform:translateY(-2px); }
+    .playBtn.good{ background:#2ecc71; }
+    .playBtn.bad{ background:#e74c3c; }
+    .playBtn.warn{ background:#f1c40f; color:#1e272e; }
+
+    .message{
+      text-align:center;
+      margin-top:14px;
+      min-height:1.5em;
+      font-weight:700;
+      line-height:1.4;
+    }
+    .footer{
+      margin-top:14px;
+      text-align:center;
+      opacity:.85;
+      font-size:.95rem;
+    }
+
+    .game-end{
+      text-align:center;
+      padding:22px 10px 6px;
+    }
+    .result{
+      font-size:clamp(1.4rem, 3vw, 2.3rem);
+      margin:10px 0 6px;
+      color:#f1c40f;
+    }
+
+    @media (max-width:640px){
+      .app{ padding:16px; border-radius:20px; }
+      .pill{ min-width: calc(50% - 6px); }
+      .light{ width:120px; }
+      .bulb{ width:84px; height:84px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="homeScreen" class="screen show">
+      <h1>🚦 Semaforo Impazzito</h1>
+      <p class="subtitle">Clicca solo quando il semaforo è verde.<br>Se clicchi sul rosso, perdi punti!</p>
+
+      <div class="topbar">
+        <button class="btn" id="startBtn">Gioca</button>
+        <button class="btn secondary" id="resetBtn">Reset</button>
+        <button class="btn" id="commentsBtn">Commenti</button>
+        <button class="btn" id="funBtn">fun.games</button>
+      </div>
+
+      <div class="game-end">
+        <div class="result">Aspetta il verde e non avere fretta.</div>
+        <p class="footer">Un gioco di attenzione, riflessi e un po' di fortuna.</p>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <h1>🚦 Semaforo Impazzito</h1>
+      <div class="scoreboard">
+        <div class="pill">Punti: <span id="score">0</span></div>
+        <div class="pill">Tempo: <span id="time">30</span>s</div>
+        <div class="pill">Round: <span id="round">1</span></div>
+      </div>
+
+      <div class="topbar">
+        <button class="btn secondary" id="backBtn">⬅ Torna alla home</button>
+      </div>
+
+      <div class="traffic">
+        <div class="light" aria-label="Semaforo">
+          <div class="bulb red" id="redBulb"></div>
+          <div class="bulb yellow" id="yellowBulb"></div>
+          <div class="bulb green" id="greenBulb"></div>
+        </div>
+        <div class="current" id="currentState">Rosso</div>
+        <button class="playBtn" id="actionBtn">Aspetta...</button>
+      </div>
+
+      <div class="message" id="message">Premi il pulsante solo quando diventa verde.</div>
+      <div class="footer">Più vai avanti, più il semaforo cambia velocemente.</div>
+    </section>
+
+    <section id="endScreen" class="screen">
+      <h1>🚦 Semaforo Impazzito</h1>
+      <div class="game-end">
+        <div class="result" id="finalScore">Hai totalizzato 0 punti!</div>
+        <p class="subtitle" id="finalMessage">Hai guidato bene... o quasi.</p>
+        <div class="topbar">
+          <button class="btn" id="playAgainBtn">Gioca ancora</button>
+          <button class="btn secondary" id="backHomeBtn">Torna alla home</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const homeScreen = document.getElementById('homeScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const endScreen = document.getElementById('endScreen');
+
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const commentsBtn = document.getElementById('commentsBtn');
+    const funBtn = document.getElementById('funBtn');
+    const backBtn = document.getElementById('backBtn');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+    const backHomeBtn = document.getElementById('backHomeBtn');
+
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const roundEl = document.getElementById('round');
+    const messageEl = document.getElementById('message');
+    const finalScore = document.getElementById('finalScore');
+    const finalMessage = document.getElementById('finalMessage');
+    const redBulb = document.getElementById('redBulb');
+    const yellowBulb = document.getElementById('yellowBulb');
+    const greenBulb = document.getElementById('greenBulb');
+    const currentState = document.getElementById('currentState');
+    const actionBtn = document.getElementById('actionBtn');
+
+    let score = 0;
+    let timeLeft = 30;
+    let round = 1;
+    let running = false;
+    let timer = null;
+    let stateTimer = null;
+    let state = 'red';
+    let clickLocked = false;
+
+    const states = ['red', 'yellow', 'green'];
+    const labels = {
+      red: 'Rosso',
+      yellow: 'Giallo',
+      green: 'Verde'
+    };
+
+    function showScreen(screen) {
+      homeScreen.classList.remove('show');
+      gameScreen.classList.remove('show');
+      endScreen.classList.remove('show');
+      screen.classList.add('show');
+    }
+
+    function updateUI() {
+      scoreEl.textContent = score;
+      timeEl.textContent = timeLeft;
+      roundEl.textContent = round;
+      currentState.textContent = labels[state];
+      actionBtn.textContent = state === 'green' ? 'CLICCA!' : state === 'yellow' ? 'Prepara!' : 'Aspetta...';
+      actionBtn.className = 'playBtn ' + (state === 'green' ? 'good' : state === 'yellow' ? 'warn' : 'bad');
+    }
+
+    function renderLights() {
+      redBulb.classList.toggle('on', state === 'red');
+      yellowBulb.classList.toggle('on', state === 'yellow');
+      greenBulb.classList.toggle('on', state === 'green');
+      updateUI();
+    }
+
+    function nextState() {
+      const idx = states.indexOf(state);
+      state = states[(idx + 1) % states.length];
+      if (state === 'green') {
+        round += 1;
+        messageEl.textContent = 'Adesso clicca!';
+      } else if (state === 'yellow') {
+        messageEl.textContent = 'Quasi... aspetta il verde.';
+      } else {
+        messageEl.textContent = 'Rosso! Fermati.';
+      }
+      renderLights();
+    }
+
+    function startStateCycle() {
+      clearInterval(stateTimer);
+      stateTimer = setInterval(() => {
+        if (!running) return;
+        const delay = Math.max(420, 1200 - round * 60);
+        nextState();
+        clearInterval(stateTimer);
+        stateTimer = setInterval(() => {
+          if (!running) return;
+          nextState();
+        }, delay);
+      }, Math.max(420, 1200 - round * 60));
+    }
+
+    function startGame() {
+      score = 0;
+      timeLeft = 30;
+      round = 1;
+      running = true;
+      state = 'red';
+      clickLocked = false;
+      updateUI();
+      messageEl.textContent = 'Premi solo quando diventa verde.';
+      showScreen(gameScreen);
+      renderLights();
+      startStateCycle();
+
+      clearInterval(timer);
+      timer = setInterval(() => {
+        timeLeft -= 1;
+        updateUI();
+        if (timeLeft <= 0) endGame();
+      }, 1000);
+    }
+
+    function resetGame() {
+      clearInterval(timer);
+      clearInterval(stateTimer);
+      timer = null;
+      stateTimer = null;
+      score = 0;
+      timeLeft = 30;
+      round = 1;
+      running = false;
+      state = 'red';
+      clickLocked = false;
+      updateUI();
+      renderLights();
+      messageEl.textContent = 'Premi il pulsante solo quando diventa verde.';
+      showScreen(homeScreen);
+    }
+
+    function handleClick() {
+      if (!running || clickLocked) return;
+      clickLocked = true;
+      setTimeout(() => clickLocked = false, 180);
+
+      if (state === 'green') {
+        score += 1;
+        messageEl.textContent = score % 5 === 0 ? 'Perfetto! Hai preso il verde al momento giusto.' : 'Bravo! Hai cliccato al verde.';
+      } else {
+        score = Math.max(0, score - 1);
+        messageEl.textContent = 'Oops! Non era verde.';
+      }
+      updateUI();
+    }
+
+    function endGame() {
+      running = false;
+      clearInterval(timer);
+      clearInterval(stateTimer);
+      timer = null;
+      stateTimer = null;
+
+      finalScore.textContent = 'Hai totalizzato ' + score + ' punti!';
+      if (score < 5) {
+        finalMessage.textContent = 'Il semaforo ti ha fatto aspettare troppo.';
+      } else if (score < 15) {
+        finalMessage.textContent = 'Molto bene! Hai avuto buoni riflessi.';
+      } else {
+        finalMessage.textContent = 'Fantastico! Il verde ti obbediva quasi sempre.';
+      }
+      showScreen(endScreen);
+    }
+
+    startBtn.addEventListener('click', startGame);
+    playAgainBtn.addEventListener('click', startGame);
+    resetBtn.addEventListener('click', resetGame);
+    backBtn.addEventListener('click', resetGame);
+    backHomeBtn.addEventListener('click', resetGame);
+    commentsBtn.addEventListener('click', () => window.open('https://github.com/wmichaeljackson/semaforo-impazzito/discussions/1', '_blank'));
+    funBtn.addEventListener('click', () => location.href = 'https://wmichaeljackson.github.io/fun.games/');
+    actionBtn.addEventListener('click', handleClick);
+
+    updateUI();
+    renderLights();
+    showScreen(homeScreen);
+  </script>
+</body>
+</html>
